@@ -1,17 +1,24 @@
+//! Vaultier is a crate to read secrets from Hashicorp Vault.
+//!
+//!
 //! ```
 //! use vaultier::SecretClient;
 //!
 //! struct MySecrets {
-//!    pub username: String,
-//!    pub password: String,
+//!     pub username: String,
+//!     pub password: String,
 //! }
 //!
-//! let address = "";
-//! let mount = String::new();
-//! let base_path = String::new();
+//! let address = "<vault instance address>";
+//! let mount = String::from("<mount>");
+//! let base_path = String::from("environment");
 //! let client = SecretClient::new(address, mount, base_path, None).unwrap();
 //!
+//! // read secrets from that base path
 //! let secrets = client.read_secrets::<MySecrets>().await.unwrap();
+//!
+//! // read secrets from the passed path relative to the base path: .../environment/my-secrets
+//! let secrets = client.read_secrets_from::<MySecrets>("my-secrets").await.unwrap();
 //! ```
 
 pub mod error;
