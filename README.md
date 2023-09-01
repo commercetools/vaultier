@@ -7,7 +7,9 @@ in three other rust driven projects.
 
 ```rust
 use vaultier::SecretClient;
+use serde::Deserialize;
 
+#[derive(Deserialize)]
 struct MySecrets {
     pub username: String,
     pub password: String,

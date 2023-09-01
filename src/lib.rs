@@ -1,9 +1,10 @@
 //! Vaultier is a crate to read secrets from Hashicorp Vault.
 //!
 //!
-//! ```
+//! ``` compile_fail
 //! use vaultier::SecretClient;
 //!
+//! #[derive(serde::Deserialize)]
 //! struct MySecrets {
 //!     pub username: String,
 //!     pub password: String,
