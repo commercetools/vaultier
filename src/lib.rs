@@ -14,7 +14,7 @@
 //! let secrets = client.read_secrets::<MySecrets>().await.unwrap();
 //! ```
 
-pub(crate) mod error;
+pub mod error;
 
 use std::fs::File;
 use std::io::prelude::*;
@@ -34,7 +34,7 @@ pub struct SecretClient {
 }
 
 impl SecretClient {
-    pub(crate) fn new(
+    pub fn new(
         address: &str,
         mount: String,
         base_path: String,
@@ -59,7 +59,7 @@ impl SecretClient {
         })
     }
 
-    pub(crate) async fn read_secrets_from<A>(&self, path: &str) -> Result<A>
+    pub async fn read_secrets_from<A>(&self, path: &str) -> Result<A>
     where
         A: for<'de> Deserialize<'de>,
     {
@@ -67,7 +67,7 @@ impl SecretClient {
         self.read_secrets_internal::<A>(&path).await
     }
 
-    pub(crate) async fn read_secrets<A>(&self) -> Result<A>
+    pub async fn read_secrets<A>(&self) -> Result<A>
     where
         A: for<'de> Deserialize<'de>,
     {
