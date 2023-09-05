@@ -1,9 +1,10 @@
 //! Vaultier is a crate to read secrets from Hashicorp Vault.
 //!
 //!
-//! ```
+//! ``` compile_fail
 //! use vaultier::SecretClient;
 //!
+//! #[derive(serde::Deserialize)]
 //! struct MySecrets {
 //!     pub username: String,
 //!     pub password: String,
@@ -11,13 +12,13 @@
 //!
 //! let address = "<vault instance address>";
 //! let mount = String::from("<mount>");
-//! let base_path = String::from("environment");
+//! let base_path = String::from("<base_path>");
 //! let client = SecretClient::new(address, mount, base_path, None).unwrap();
 //!
 //! // read secrets from that base path
 //! let secrets = client.read_secrets::<MySecrets>().await.unwrap();
 //!
-//! // read secrets from the passed path relative to the base path: .../environment/my-secrets
+//! // read secrets from the passed path relative to the base path: mount/data/base_path/my-secrets
 //! let secrets = client.read_secrets_from::<MySecrets>("my-secrets").await.unwrap();
 //! ```
 
@@ -34,6 +35,11 @@ use crate::error::Result;
 
 const TOKEN_PATH: &str = "/vault/secrets/token";
 
+/// A client to read secrets from Hashicorp Vault.
+///
+/// The client is initialized with a VaultClient, the mount and a base path.
+///
+/// <mount>/data/<base_path> where base_path reflects the lowest level of where secrets are located.
 pub struct SecretClient {
     client: VaultClient,
     mount: String,
@@ -41,6 +47,12 @@ pub struct SecretClient {
 }
 
 impl SecretClient {
+    /// Convenience method to create a new SecretClient.
+    ///
+    /// - address is the address of your Vault instance.
+    /// - mount is the mount point of the KV2 secrets engine.
+    /// - base_path reflects the lowest level of where secrets are located
+    /// - token is the Vault token to use. If no token is passed it tries to read the token from /vault/secrets/token.
     pub fn new(
         address: &str,
         mount: String,
@@ -59,13 +71,10 @@ impl SecretClient {
                 .build()?,
         )?;
 
-        Ok(SecretClient {
-            client,
-            mount,
-            base_path,
-        })
+        Ok(SecretClient { client, mount, base_path })
     }
 
+    /// Read secrets from the passed path relative to the base path.
     pub async fn read_secrets_from<A>(&self, path: &str) -> Result<A>
     where
         A: for<'de> Deserialize<'de>,
@@ -74,6 +83,7 @@ impl SecretClient {
         self.read_secrets_internal::<A>(&path).await
     }
 
+    /// Read secrets from the base path.
     pub async fn read_secrets<A>(&self) -> Result<A>
     where
         A: for<'de> Deserialize<'de>,

@@ -1,13 +1,14 @@
-# Vaultier `/slɒθ/`
+# Vaultier `/slɒθ/` :sloth:
 
-This crate extracts the functionality of reading secrets from vault that we used redundantly 
-in three other rust driven projects.
+Small crate to read secrets from Hashicorp Vault.
 
 ## Usage
 
 ```rust
 use vaultier::SecretClient;
+use serde::Deserialize;
 
+#[derive(Deserialize)]
 struct MySecrets {
     pub username: String,
     pub password: String,
@@ -15,12 +16,12 @@ struct MySecrets {
 
 let address = "<vault instance address>";
 let mount = String::from("<mount>");
-let base_path = String::from("environment");
+let base_path = String::from("<base_path>");
 let client = SecretClient::new(address, mount, base_path, None).unwrap();
 
 // read secrets from that base path
 let secrets = client.read_secrets::<MySecrets>().await.unwrap();
 
-// read secrets from the passed path relative to the base path: .../environment/my-secrets
+// read secrets from the passed path relative to the base path: mount/data/base_path/my-secrets
 let secrets = client.read_secrets_from::<MySecrets>("my-secrets").await.unwrap();
 ```
