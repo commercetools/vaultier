@@ -2,7 +2,15 @@
 name = "vaultier"
 version = "0.1.0"
 edition = "2021"
+authors = ["Mathias Oertel <mathias.oertel@commercetools.com>", "Nelu Snegur <nelu.snegur@commercetools.com>"]
+description = "Crate to read secrets from Hashicorp Vault."
+documentation = "https://docs.rs/vaultier"
+readme = "README.md"
+keywords = ["secrets", "vault", "hashicorp"]
+categories = ["secrets"]
+license = "MIT"
+repository = "https://github.com/commercetools/vaultier"
 
 [dependencies]
-serde = "1.0.188"
-vaultrs = "0.7.0"
+serde = "1.0"
+vaultrs = "0.7"
