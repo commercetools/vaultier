@@ -1,6 +1,6 @@
 # Vaultier `/slɒθ/` :sloth:
 
-Small crate to read secrets from Hashicorp Vault.
+Small crate to read secrets from Hashicorp Vault. Based on [vaultrs](https://github.com/jmgilman/vaultrs).
 
 ## Usage
 
@@ -25,3 +25,7 @@ let secrets = client.read_secrets::<MySecrets>().await.unwrap();
 // read secrets from the passed path relative to the base path: mount/data/base_path/my-secrets
 let secrets = client.read_secrets_from::<MySecrets>("my-secrets").await.unwrap();
 ```
+
+## License
+
+[MIT](./LICENSE-MIT)
