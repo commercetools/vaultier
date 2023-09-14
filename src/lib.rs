@@ -22,22 +22,29 @@
 //! let secrets = client.read_secrets_from::<MySecrets>("my-secrets").await.unwrap();
 //! ```
 
+#[cfg(feature = "auth")]
+mod auth;
 pub mod error;
 
 use std::fs::File;
 use std::io::prelude::*;
 
-use serde::{Deserialize, Serialize};
-use vaultrs::api::kv2::responses::SecretVersionMetadata;
-use vaultrs::api::AuthInfo;
+use serde::Deserialize;
 use vaultrs::client::{VaultClient, VaultClientSettingsBuilder};
 use vaultrs::kv2;
 
+#[cfg(feature = "write")]
+use serde::Serialize;
+#[cfg(feature = "write")]
+use vaultrs::api::kv2::responses::SecretVersionMetadata;
+
 use crate::error::Result;
 
+#[cfg(feature = "auth")]
+use crate::auth::login;
+
+#[cfg(feature = "token")]
 const VAULT_TOKEN_PATH: &str = "/vault/secrets/token";
-const K8S_JWT: &str = "K8S_JWT";
-const SERVICE_TOKEN_PATH: &str = "/var/run/secrets/kubernetes.io/serviceaccount/token";
 
 /// A client to read secrets from Hashicorp Vault.
 ///
@@ -57,6 +64,7 @@ impl SecretClient {
     /// - mount is the mount point of the KV2 secrets engine.
     /// - base_path reflects the lowest level of where secrets are located
     /// - token is the Vault token to use. If no token is passed it tries to read the token from /vault/secrets/token.
+    #[cfg(feature = "token")]
     pub fn new(
         address: &str,
         mount: String,
@@ -75,15 +83,16 @@ impl SecretClient {
     ///
     /// - address is the address of your Vault instance
     /// - auth_mount is the mount path of the vault authentication
+    /// - role is the vault role to use for the login
     /// - mount is the mount point of the KV2 secrets engine
     /// - base_path reflects the lowest level of where secrets are located
-    /// - role is the vault role to use for the login
+    #[cfg(feature = "auth")]
     pub async fn create(
         address: &str,
         auth_mount: &str,
+        role: &str,
         mount: String,
         base_path: String,
-        role: &str,
     ) -> Result<SecretClient> {
         let auth = login(address, auth_mount, role).await?;
 
@@ -106,7 +115,17 @@ impl SecretClient {
         Ok(SecretClient { client, mount, base_path })
     }
 
+    /// Read secrets from the base path.
+    #[cfg(feature = "read")]
+    pub async fn read_secrets<A>(&self) -> Result<A>
+    where
+        A: for<'de> Deserialize<'de>,
+    {
+        self.read_secrets_internal::<A>(&self.base_path).await
+    }
+
     /// Read secrets from the passed path relative to the base path.
+    #[cfg(feature = "read")]
     pub async fn read_secrets_from<A>(&self, path: &str) -> Result<A>
     where
         A: for<'de> Deserialize<'de>,
@@ -115,14 +134,7 @@ impl SecretClient {
         self.read_secrets_internal::<A>(&path).await
     }
 
-    /// Read secrets from the base path.
-    pub async fn read_secrets<A>(&self) -> Result<A>
-    where
-        A: for<'de> Deserialize<'de>,
-    {
-        self.read_secrets_internal::<A>(&self.base_path).await
-    }
-
+    #[cfg(feature = "read")]
     async fn read_secrets_internal<A>(&self, path: &str) -> Result<A>
     where
         A: for<'de> Deserialize<'de>,
@@ -132,6 +144,7 @@ impl SecretClient {
     }
 
     /// Set secrets in the base path.
+    #[cfg(feature = "write")]
     pub async fn set_secrets<A>(&self, data: &A) -> Result<SecretVersionMetadata>
     where
         A: Serialize,
@@ -140,6 +153,7 @@ impl SecretClient {
     }
 
     /// Set secrets in the base path.
+    #[cfg(feature = "write")]
     pub async fn set_secrets_in<A>(&self, path: &str, data: &A) -> Result<SecretVersionMetadata>
     where
         A: Serialize,
@@ -148,6 +162,7 @@ impl SecretClient {
         self.set_secrets_internal(&path, data).await
     }
 
+    #[cfg(feature = "write")]
     pub async fn set_secrets_internal<A>(
         &self,
         path: &str,
@@ -166,23 +181,4 @@ fn read_token_from(path: &str) -> Result<String> {
     let mut token = String::new();
     file.read_to_string(&mut token)?;
     Ok(token)
-}
-
-async fn login(vault_address: &str, auth_mount_path: &str, role: &str) -> Result<AuthInfo> {
-    let jwt = service_account_jwt()?;
-    let client = VaultClient::new(
-        VaultClientSettingsBuilder::default()
-            .address(vault_address)
-            .build()?,
-    )?;
-    Ok(vaultrs::auth::kubernetes::login(&client, auth_mount_path, role, &jwt).await?)
-}
-
-fn service_account_jwt() -> Result<String> {
-    let env_token = std::env::var(K8S_JWT);
-
-    match env_token {
-        Ok(token) => Ok(token),
-        Err(_) => read_token_from(SERVICE_TOKEN_PATH),
-    }
 }
