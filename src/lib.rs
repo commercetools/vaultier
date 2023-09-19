@@ -1,7 +1,7 @@
 //! Vaultier is a crate to read from and write secrets to Hashicorp Vault.
 //!
 //!
-//! ``` compile_fail
+//! ```compile_fail
 //! use vaultier::SecretClient;
 //!
 //! #[derive(serde::Deserialize)]
@@ -13,7 +13,14 @@
 //! let address = "<vault instance address>";
 //! let mount = String::from("<mount>");
 //! let base_path = String::from("<base_path>");
+//!
+//! // With token or default feature enabled
 //! let client = SecretClient::new(address, mount, base_path, None).unwrap();
+//!
+//! // With auth feature enabled
+//! let auth_mount = "<mount to vault auth>";
+//! let role = "<your role>";
+//! let client = SecretClient::create(address, auth_mount, role, mount, base_path).unwrap();
 //!
 //! // read secrets from that base path
 //! let secrets = client.read_secrets::<MySecrets>().await.unwrap();
