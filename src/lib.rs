@@ -131,6 +131,16 @@ impl SecretClient {
         self.read_secrets_internal::<A>(&self.base_path).await
     }
 
+    /// Read secrets from the base if the path exists
+    #[cfg(feature = "read")]
+    pub async fn read_secrets_option<A>(&self) -> Result<Option<A>>
+    where
+        A: for<'de> Deserialize<'de>,
+    {
+        self.read_secrets_internal_option::<A>(&self.base_path)
+            .await
+    }
+
     /// Read secrets from the passed path relative to the base path.
     #[cfg(feature = "read")]
     pub async fn read_secrets_from<A>(&self, path: &str) -> Result<A>
@@ -148,6 +158,23 @@ impl SecretClient {
     {
         let secrets: A = kv2::read(&self.client, &self.mount, path).await?;
         Ok(secrets)
+    }
+
+    #[cfg(feature = "read")]
+    async fn read_secrets_internal_option<A>(&self, path: &str) -> Result<Option<A>>
+    where
+        A: for<'de> Deserialize<'de>,
+    {
+        use vaultrs::error::ClientError;
+
+        let secrets: std::result::Result<A, vaultrs::error::ClientError> =
+            kv2::read::<A>(&self.client, &self.mount, path).await;
+
+        match secrets {
+            Ok(data) => Ok(Some(data)),
+            Err(ClientError::APIError { code, errors: _ }) if code == 404 => Ok(None),
+            Err(error) => Err(error.into()),
+        }
     }
 
     /// Set secrets in the base path.
