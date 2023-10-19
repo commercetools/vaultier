@@ -172,7 +172,7 @@ impl SecretClient {
 
         match secrets {
             Ok(data) => Ok(Some(data)),
-            Err(ClientError::APIError { code, errors: _ }) if code == 404 => Ok(None),
+            Err(ClientError::APIError { code: 404, errors: _ }) => Ok(None),
             Err(error) => Err(error.into()),
         }
     }
