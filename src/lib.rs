@@ -165,8 +165,6 @@ impl SecretClient {
     where
         A: for<'de> Deserialize<'de>,
     {
-        use vaultrs::error::ClientError;
-
         let secrets: std::result::Result<A, vaultrs::error::ClientError> =
             kv2::read::<A>(&self.client, &self.mount, path).await;
 
