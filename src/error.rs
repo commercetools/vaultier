@@ -8,6 +8,7 @@ pub enum VaultierError {
     VaultClient(vaultrs::error::ClientError),
     VaultClientSettings(vaultrs::client::VaultClientSettingsBuilderError),
     IO(io::Error),
+    PathNotFound(String),
 }
 
 impl std::error::Error for VaultierError {}
@@ -18,6 +19,7 @@ impl fmt::Display for VaultierError {
             VaultierError::VaultClient(e) => std::fmt::Display::fmt(e, f),
             VaultierError::VaultClientSettings(e) => std::fmt::Display::fmt(e, f),
             VaultierError::IO(e) => std::fmt::Display::fmt(e, f),
+            VaultierError::PathNotFound(e) => std::fmt::Display::fmt(e, f),
         }
     }
 }

@@ -38,7 +38,10 @@ use std::io::prelude::*;
 
 use serde::Deserialize;
 use vaultrs::client::{VaultClient, VaultClientSettingsBuilder};
+use vaultrs::error::ClientError;
 use vaultrs::kv2;
+
+use crate::error::VaultierError;
 
 #[cfg(feature = "write")]
 use serde::Serialize;
@@ -146,8 +149,16 @@ impl SecretClient {
     where
         A: for<'de> Deserialize<'de>,
     {
-        let secrets: A = kv2::read(&self.client, &self.mount, path).await?;
-        Ok(secrets)
+        let secrets = kv2::read::<A>(&self.client, &self.mount, path).await;
+
+        if let Err(ClientError::APIError { code: 404, .. }) = secrets {
+            return Err(VaultierError::PathNotFound(format!(
+                "{mount}/data/{path}",
+                mount = self.mount
+            )));
+        }
+
+        Ok(secrets?)
     }
 
     /// Set secrets in the base path.
