@@ -1,6 +1,6 @@
 [package]
 name = "vaultier"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Mathias Oertel <mathias.oertel@commercetools.com>", "Nelu Snegur <nelu.snegur@commercetools.com>"]
 description = "Crate to write and read secrets from Hashicorp Vault."
