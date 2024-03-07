@@ -70,9 +70,9 @@ pub struct SecretClient {
 /// option for confguring the write, the version will be used as cas value
 /// see https://developer.hashicorp.com/vault/tutorials/secrets-management/versioned-kv#step-8-check-and-set-operations
 pub struct WriteSecretOptions<'a, A> {
-    path: &'a str,
-    data: A,
-    version: Option<u32>,
+    pub path: &'a str,
+    pub data: A,
+    pub version: Option<u32>,
 }
 
 impl SecretClient {
