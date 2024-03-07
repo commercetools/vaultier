@@ -68,10 +68,10 @@ pub struct SecretClient {
 }
 
 /// option for confguring the write, the version will be used as cas value
-/// see https://developer.hashicorp.com/vault/tutorials/secrets-management/versioned-kv#step-8-check-and-set-operations
+/// also see https://developer.hashicorp.com/vault/tutorials/secrets-management/versioned-kv#step-8-check-and-set-operations
 pub struct WriteSecretOptions<'a, A> {
-    pub path: &'a str,
     pub data: A,
+    pub path: Option<&'a str>,
     pub version: Option<u32>,
 }
 
@@ -210,19 +210,20 @@ impl SecretClient {
         A: Serialize,
     {
         use vaultrs::api::kv2::requests::SetSecretRequestOptions;
+        let path = options.path.unwrap_or(&self.base_path);
 
         let auth_info = match options.version {
             Some(cas) => {
                 kv2::set_with_options(
                     &self.client,
                     &self.mount,
-                    options.path,
+                    path,
                     &options.data,
                     SetSecretRequestOptions { cas: cas },
                 )
                 .await?
             }
-            None => kv2::set(&self.client, &self.mount, options.path, &options.data).await?,
+            None => kv2::set(&self.client, &self.mount, path, &options.data).await?,
         };
 
         Ok(auth_info)
