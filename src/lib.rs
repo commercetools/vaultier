@@ -250,7 +250,7 @@ impl SecretClient {
                     &self.mount,
                     path,
                     &options.data,
-                    SetSecretRequestOptions { cas: cas },
+                    SetSecretRequestOptions { cas },
                 )
                 .await?
             }
