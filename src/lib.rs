@@ -47,6 +47,8 @@ use crate::error::VaultierError;
 #[cfg(feature = "write")]
 use serde::Serialize;
 #[cfg(feature = "write")]
+use vaultrs::api::kv2::requests::SetSecretRequestOptions;
+#[cfg(feature = "write")]
 use vaultrs::api::kv2::responses::SecretVersionMetadata;
 
 use crate::error::Result;
@@ -239,8 +241,7 @@ impl SecretClient {
     where
         A: Serialize,
     {
-        use vaultrs::api::kv2::requests::SetSecretRequestOptions;
-        let path = options.path.unwrap_or(&self.base_path);
+        let path = options.path.unwrap_or_else(|| &self.base_path);
 
         let auth_info = match options.version {
             Some(cas) => {
