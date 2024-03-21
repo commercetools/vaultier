@@ -37,6 +37,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use serde::Deserialize;
+use vaultrs::api::kv2::responses::ReadSecretMetadataResponse;
 use vaultrs::client::{VaultClient, VaultClientSettingsBuilder};
 use vaultrs::error::ClientError;
 use vaultrs::kv2;
@@ -45,6 +46,8 @@ use crate::error::VaultierError;
 
 #[cfg(feature = "write")]
 use serde::Serialize;
+#[cfg(feature = "write")]
+use vaultrs::api::kv2::requests::SetSecretRequestOptions;
 #[cfg(feature = "write")]
 use vaultrs::api::kv2::responses::SecretVersionMetadata;
 
@@ -65,6 +68,20 @@ pub struct SecretClient {
     client: VaultClient,
     mount: String,
     base_path: String,
+}
+
+/// Options for confguring a write, the version will be used as cas value.
+/// also see https://developer.hashicorp.com/vault/tutorials/secrets-management/versioned-kv#step-8-check-and-set-operations
+pub struct WriteSecretOptions<'a, A> {
+    pub data: A,
+    pub path: Option<&'a str>,
+    pub version: Option<u32>,
+}
+
+/// secret data including metadata
+pub struct SecretWithMetaData<A> {
+    pub data: A,
+    pub metadata: ReadSecretMetadataResponse,
 }
 
 impl SecretClient {
@@ -131,7 +148,7 @@ impl SecretClient {
     where
         A: for<'de> Deserialize<'de>,
     {
-        self.read_secrets_internal::<A>(&self.base_path).await
+        self.read_secrets_internal::<A>(&self.base_path, None).await
     }
 
     /// Read secrets from the passed path relative to the base path.
@@ -141,15 +158,38 @@ impl SecretClient {
         A: for<'de> Deserialize<'de>,
     {
         let path = format!("{}/{}", self.base_path, path);
-        self.read_secrets_internal::<A>(&path).await
+        self.read_secrets_internal::<A>(&path, None).await
     }
 
+    /// Read secrets with metadata.
     #[cfg(feature = "read")]
-    async fn read_secrets_internal<A>(&self, path: &str) -> Result<A>
+    pub async fn read_secrets_with_metadata<A>(
+        &self,
+        path: Option<&str>,
+    ) -> Result<SecretWithMetaData<A>>
     where
         A: for<'de> Deserialize<'de>,
     {
-        let secrets = kv2::read::<A>(&self.client, &self.mount, path).await;
+        let path = path.unwrap_or(&self.base_path);
+        let metadata: vaultrs::api::kv2::responses::ReadSecretMetadataResponse =
+            kv2::read_metadata(&self.client, &self.mount, path).await?;
+
+        let data = self
+            .read_secrets_internal(path, Some(metadata.current_version))
+            .await?;
+
+        Ok(SecretWithMetaData { data, metadata })
+    }
+
+    #[cfg(feature = "read")]
+    async fn read_secrets_internal<A>(&self, path: &str, version: Option<u64>) -> Result<A>
+    where
+        A: for<'de> Deserialize<'de>,
+    {
+        let secrets = match version {
+            Some(version) => kv2::read_version::<A>(&self.client, &self.mount, path, version).await,
+            None => kv2::read::<A>(&self.client, &self.mount, path).await,
+        };
 
         if let Err(ClientError::APIError { code: 404, .. }) = secrets {
             return Err(VaultierError::PathNotFound(format!(
@@ -190,6 +230,33 @@ impl SecretClient {
         A: Serialize,
     {
         let auth_info = kv2::set(&self.client, &self.mount, path, data).await?;
+        Ok(auth_info)
+    }
+
+    #[cfg(feature = "write")]
+    pub async fn set_secrets_with_options<A>(
+        &self,
+        options: WriteSecretOptions<'_, A>,
+    ) -> Result<SecretVersionMetadata>
+    where
+        A: Serialize,
+    {
+        let path = options.path.unwrap_or_else(|| &self.base_path);
+
+        let auth_info = match options.version {
+            Some(cas) => {
+                kv2::set_with_options(
+                    &self.client,
+                    &self.mount,
+                    path,
+                    &options.data,
+                    SetSecretRequestOptions { cas },
+                )
+                .await?
+            }
+            None => kv2::set(&self.client, &self.mount, path, &options.data).await?,
+        };
+
         Ok(auth_info)
     }
 }
