@@ -2,7 +2,7 @@
 name = "vaultier"
 version = "0.3.0"
 edition = "2021"
-authors = ["Mathias Oertel <mathias.oertel@commercetools.com>", "Nelu Snegur <nelu.snegur@commercetools.com>"]
+authors = ["Mathias Oertel <mathias.oertel@commercetools.com>", "Nelu Snegur <nelu.snegur@commercetools.com>", "Andreas Drobisch <andreas.drobisch@commercetools.com>"]
 description = "Crate to write and read secrets from Hashicorp Vault."
 documentation = "https://docs.rs/vaultier"
 readme = "README.md"
