@@ -15,4 +15,19 @@ pub enum VaultierError {
     IO(#[from] io::Error),
     #[error("Path not found: {0}")]
     PathNotFound(String),
+    #[cfg(feature = "metadata")]
+    #[error("Unexpected response from the Vault API: {status}. Message: {message}.")]
+    Api {
+        status: reqwest::StatusCode,
+        message: String,
+    },
+    #[cfg(feature = "metadata")]
+    #[error("Failed to send request: {0}")]
+    Reqwest(#[from] reqwest::Error),
+    #[cfg(feature = "metadata")]
+    #[error("Json related error: {0}")]
+    Json(#[from] serde_json::Error),
+    #[cfg(feature = "metadata")]
+    #[error("Failed to parse URL: {0}")]
+    Url(#[from] url::ParseError),
 }

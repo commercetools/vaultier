@@ -32,9 +32,13 @@
 #[cfg(feature = "auth")]
 mod auth;
 pub mod error;
+#[cfg(feature = "metadata")]
+pub mod metadata;
 
 use std::fs::File;
 use std::io::prelude::*;
+#[cfg(feature = "metadata")]
+use std::sync::Arc;
 
 use serde::Deserialize;
 use vaultrs::api::kv2::responses::ReadSecretMetadataResponse;
@@ -68,6 +72,10 @@ pub struct SecretClient {
     client: VaultClient,
     mount: String,
     base_path: String,
+    #[cfg(feature = "metadata")]
+    token: Arc<str>,
+    #[cfg(feature = "metadata")]
+    http_client: reqwest::Client,
 }
 
 /// Options for confguring a write, the version will be used as cas value.
@@ -97,13 +105,21 @@ impl SecretClient {
         mount: String,
         base_path: String,
         token: Option<String>,
+        #[cfg(feature = "metadata")] http_client: reqwest::Client,
     ) -> Result<SecretClient> {
         let token = match token {
             Some(token) => token,
             None => read_token_from(VAULT_TOKEN_PATH)?,
         };
 
-        Self::create_internal(address, mount, base_path, &token)
+        Self::create_internal(
+            address,
+            mount,
+            base_path,
+            &token,
+            #[cfg(feature = "metadata")]
+            http_client,
+        )
     }
 
     /// Convenience method to create a new SecretClient with a login to vault.
@@ -120,10 +136,11 @@ impl SecretClient {
         role: &str,
         mount: String,
         base_path: String,
+        #[cfg(feature = "metadata")] http_client: reqwest::Client,
     ) -> Result<SecretClient> {
         let auth = login(address, auth_mount, role).await?;
 
-        Self::create_internal(address, mount, base_path, &auth.client_token)
+        Self::create_internal(address, mount, base_path, &auth.client_token, http_client)
     }
 
     fn create_internal(
@@ -131,6 +148,7 @@ impl SecretClient {
         mount: String,
         base_path: String,
         token: &str,
+        #[cfg(feature = "metadata")] http_client: reqwest::Client,
     ) -> Result<SecretClient> {
         let client = VaultClient::new(
             VaultClientSettingsBuilder::default()
@@ -139,7 +157,15 @@ impl SecretClient {
                 .build()?,
         )?;
 
-        Ok(SecretClient { client, mount, base_path })
+        Ok(SecretClient {
+            client,
+            mount,
+            base_path,
+            #[cfg(feature = "metadata")]
+            token: Arc::from(token),
+            #[cfg(feature = "metadata")]
+            http_client,
+        })
     }
 
     /// Read secrets from the base path.
@@ -221,11 +247,7 @@ impl SecretClient {
     }
 
     #[cfg(feature = "write")]
-    pub async fn set_secrets_internal<A>(
-        &self,
-        path: &str,
-        data: &A,
-    ) -> Result<SecretVersionMetadata>
+    async fn set_secrets_internal<A>(&self, path: &str, data: &A) -> Result<SecretVersionMetadata>
     where
         A: Serialize,
     {
@@ -258,6 +280,33 @@ impl SecretClient {
         };
 
         Ok(auth_info)
+    }
+
+    #[cfg(feature = "metadata")]
+    pub async fn set_metadata(
+        &self,
+        metadata: &metadata::Metadata<'_>,
+    ) -> Result<SecretVersionMetadata> {
+        let url = url::Url::parse(&format!(
+            "{mount}/metadata/{path}",
+            mount = self.mount,
+            path = self.base_path
+        ))?;
+        metadata::set_metadata_internal(self, url, metadata).await
+    }
+
+    #[cfg(feature = "metadata")]
+    pub async fn set_metadata_in(
+        &self,
+        path: &str,
+        metadata: &metadata::Metadata<'_>,
+    ) -> Result<SecretVersionMetadata> {
+        let url = url::Url::parse(&format!(
+            "{mount}/metadata/{base_path}/{path}",
+            mount = self.mount,
+            base_path = self.base_path
+        ))?;
+        metadata::set_metadata_internal(self, url, metadata).await
     }
 }
 
