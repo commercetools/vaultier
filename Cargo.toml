@@ -15,6 +15,9 @@ repository = "https://github.com/commercetools/vaultier"
 serde = "1.0"
 vaultrs = "0.7"
 thiserror = "1.0"
+reqwest = { version = "0.12", default-features = false, features = ["json"], optional = true }
+serde_json = { version = "1.0", optional = true }
+url = { version = "2.2", optional = true }
 
 [features]
 default = ["token", "read"]
@@ -22,4 +25,5 @@ token = []
 auth = []
 read = []
 write = []
-full = ["token", "auth", "read", "write"]
+metadata = ["reqwest", "serde_json", "url"]
+full = ["token", "auth", "read", "write", "metadata"]
