@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use serde::Deserialize;
+use reqwest::Response;
+use reqwest::StatusCode;
 use serde::Serialize;
 use url::Url;
-use vaultrs::api::kv2::responses::SecretVersionMetadata;
 
 use crate::error::Result;
 use crate::error::VaultierError;
@@ -15,7 +15,7 @@ pub(super) async fn set_metadata_internal(
     client: &SecretClient,
     url: Url,
     metadata: &Metadata<'_>,
-) -> Result<SecretVersionMetadata> {
+) -> Result<()> {
     let response = client
         .http_client
         .post(url)
@@ -25,21 +25,12 @@ pub(super) async fn set_metadata_internal(
         .await?;
 
     match response.status() {
-        reqwest::StatusCode::OK => handle_ok_response(response).await,
+        StatusCode::NO_CONTENT => Ok(()),
         status => handle_error(status, response).await,
     }
 }
 
-async fn handle_ok_response<A>(response: reqwest::Response) -> Result<A>
-where
-    A: for<'de> Deserialize<'de>,
-{
-    let content = response.bytes().await?;
-    let cluster_details = serde_json::from_slice(&content)?;
-    Ok(cluster_details)
-}
-
-async fn handle_error<A>(status: reqwest::StatusCode, response: reqwest::Response) -> Result<A> {
+async fn handle_error<A>(status: StatusCode, response: Response) -> Result<A> {
     let message = response.text().await?;
     Err(VaultierError::Api { status, message })
 }

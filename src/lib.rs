@@ -73,6 +73,8 @@ pub struct SecretClient {
     mount: String,
     base_path: String,
     #[cfg(feature = "metadata")]
+    address: Arc<str>,
+    #[cfg(feature = "metadata")]
     token: Arc<str>,
     #[cfg(feature = "metadata")]
     http_client: reqwest::Client,
@@ -140,7 +142,14 @@ impl SecretClient {
     ) -> Result<SecretClient> {
         let auth = login(address, auth_mount, role).await?;
 
-        Self::create_internal(address, mount, base_path, &auth.client_token, http_client)
+        Self::create_internal(
+            address,
+            mount,
+            base_path,
+            &auth.client_token,
+            #[cfg(feature = "metadata")]
+            http_client,
+        )
     }
 
     fn create_internal(
@@ -161,6 +170,8 @@ impl SecretClient {
             client,
             mount,
             base_path,
+            #[cfg(feature = "metadata")]
+            address: Arc::from(address),
             #[cfg(feature = "metadata")]
             token: Arc::from(token),
             #[cfg(feature = "metadata")]
@@ -283,12 +294,10 @@ impl SecretClient {
     }
 
     #[cfg(feature = "metadata")]
-    pub async fn set_metadata(
-        &self,
-        metadata: &metadata::Metadata<'_>,
-    ) -> Result<SecretVersionMetadata> {
+    pub async fn set_metadata(&self, metadata: &metadata::Metadata<'_>) -> Result<()> {
         let url = url::Url::parse(&format!(
-            "{mount}/metadata/{path}",
+            "{address}/v1/{mount}/metadata/{path}",
+            address = self.address,
             mount = self.mount,
             path = self.base_path
         ))?;
@@ -300,9 +309,10 @@ impl SecretClient {
         &self,
         path: &str,
         metadata: &metadata::Metadata<'_>,
-    ) -> Result<SecretVersionMetadata> {
+    ) -> Result<()> {
         let url = url::Url::parse(&format!(
-            "{mount}/metadata/{base_path}/{path}",
+            "{address}/v1/{mount}/metadata/{base_path}/{path}",
+            address = self.address,
             mount = self.mount,
             base_path = self.base_path
         ))?;
