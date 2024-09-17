@@ -6,8 +6,7 @@ authors = ["Mathias Oertel <mathias.oertel@commercetools.com>", "Nelu Snegur <ne
 description = "Crate to write and read secrets from Hashicorp Vault."
 documentation = "https://docs.rs/vaultier"
 readme = "README.md"
-keywords = ["vault", "hashicorp"]
-categories = ["secrets"]
+keywords = ["secrets", "vault", "hashicorp"]
 license = "MIT"
 repository = "https://github.com/commercetools/vaultier"
 
